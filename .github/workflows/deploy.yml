@@ -1,0 +1,19 @@
+name: Deploy to appserver
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Pull latest code
+        run: git -C /home/sfvaughn/Calella-Spanish-Learning-App pull
+
+      - name: Install dependencies
+        run: npm --prefix /home/sfvaughn/Calella-Spanish-Learning-App install
+
+      - name: Build
+        run: npm --prefix /home/sfvaughn/Calella-Spanish-Learning-App run build
