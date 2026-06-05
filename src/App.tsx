@@ -68,13 +68,28 @@ const BADGE_EMOJI: Record<string, string> = {
   "5-day-streak": "🔥"
 };
 
+/**
+ * Bump this when you want to force-clear ALL progress for every player.
+ * Names, profile types, and chosen avatars are preserved. Everything
+ * else (points, streaks, mastered words, session history, badges,
+ * daily ledger) is wiped on the next load.
+ *
+ * Bumped 2026-06-05 to clear practice scores accumulated during dev/
+ * testing so the family starts the journey to Calella from zero.
+ */
+const RESET_VERSION = 1;
+
 // Canonical profiles — used for migration. `avatar` is the DEFAULT emoji
 // for new/migrating profiles; users can override anytime via the picker.
 const CANONICAL_PROFILES = [
-  { id: "child-1",  name: "Ila",     type: "child" as const, avatar: "🦈",   points: 0,    accuracy: 0,  level: 1 },
-  { id: "child-2",  name: "Ian",     type: "child" as const, avatar: "🦸",   points: 0,    accuracy: 0,  level: 1 },
-  { id: "adult-1",  name: "Christy", type: "adult" as const, avatar: "👩",   points: 800,  accuracy: 65, level: 4 },
-  { id: "adult-2",  name: "Shannon", type: "adult" as const, avatar: "🎯",   points: 2000, accuracy: 85, level: 7 },
+  // Everyone starts at 0 pts. The `accuracy` field stays as a seed used
+  // ONLY for content routing (Shannon's advanced Calella curriculum gates
+  // on >= 80%, Christy's intermediate path gates around 65%). It does
+  // NOT seed actual points or count as scored answers.
+  { id: "child-1",  name: "Ila",     type: "child" as const, avatar: "🦈",   points: 0, accuracy: 0,  level: 1 },
+  { id: "child-2",  name: "Ian",     type: "child" as const, avatar: "🦸",   points: 0, accuracy: 0,  level: 1 },
+  { id: "adult-1",  name: "Christy", type: "adult" as const, avatar: "👩",   points: 0, accuracy: 65, level: 1 },
+  { id: "adult-2",  name: "Shannon", type: "adult" as const, avatar: "🎯",   points: 0, accuracy: 85, level: 1 },
 ];
 
 // Visual styling (gradient/ring) stays tied to position. Only the EMOJI
@@ -121,6 +136,51 @@ const GUIDED_SEGMENTS: Array<{ label: string; maxSeconds: number }> = [
 function App() {
   const [appState, setAppState] = useLocalStorage(APP_STORAGE_KEY, createInitialState());
   const [activeView, setActiveView] = useState<AppView>("game");
+
+  // ─── One-time reset: clear all progress when RESET_VERSION increases ───
+  // This runs once on mount. It wipes points/streaks/sessions/etc. but
+  // KEEPS each profile's id, name, type, and chosen avatarEmoji.
+  //
+  // For adults we ALSO keep the canonical accuracyPercentage seed:
+  // Shannon's advanced Calella content routing requires her accuracy
+  // be >= 80%, and Christy's intermediate routing was tuned around 65%.
+  // Without these seeds, the adults would lose access to their custom
+  // curricula until they replayed enough questions to rebuild the stat.
+  useEffect(() => {
+    setAppState((s) => {
+      if ((s.resetVersion ?? 0) >= RESET_VERSION) return s;
+      const seedAccuracyById: Record<string, number> = Object.fromEntries(
+        CANONICAL_PROFILES.map((p) => [p.id, p.accuracy])
+      );
+      return {
+        ...s,
+        resetVersion: RESET_VERSION,
+        children: s.children.map((c) => ({
+          // Preserved identity:
+          id: c.id,
+          name: c.name,
+          profileType: c.profileType,
+          avatarEmoji: c.avatarEmoji,
+          // Wiped progress:
+          totalMinutesPracticed: 0,
+          totalPoints: 0,
+          streakCount: 0,
+          currentLevel: 1,
+          accuracyPercentage:
+            c.profileType === "adult" ? seedAccuracyById[c.id] ?? 0 : 0,
+          wordsMastered: [],
+          questionStats: {},
+          totalQuestions: 0,
+          totalCorrect: 0,
+          lastPlayedDate: undefined,
+          dailyPoints: {},
+          badges: [],
+          dailyGoalCompletions: 0,
+          sessionHistory: [],
+        })),
+      };
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Migration: ensure exactly the 4 canonical profiles, correct names ─────
   // This runs once on mount. It MUST NEVER discard accumulated progress

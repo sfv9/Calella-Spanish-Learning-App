@@ -28,18 +28,14 @@ export const createProfile = (
 
 export const createInitialState = (): StoredAppState => ({
   activeProfileId: "child-1",
+  resetVersion: 1, // matches App.tsx RESET_VERSION; new installs start "post-reset"
   children: [
-    createProfile("child-1", "Ila",     "child"),
-    createProfile("child-2", "Ian",     "child"),
-    createProfile("adult-1", "Christy", "adult", {
-      currentLevel: 4,
-      totalPoints: 800, // Unlocks most worlds except advanced ones
-      accuracyPercentage: 65,
-    }),
-    createProfile("adult-2", "Shannon", "adult", {
-      currentLevel: 7,
-      totalPoints: 2000, // Unlocks all worlds
-      accuracyPercentage: 85,
-    }),
+    createProfile("child-1", "Ila",     "child", { avatarEmoji: "🦈" }),
+    createProfile("child-2", "Ian",     "child", { avatarEmoji: "🦸" }),
+    // Adults start at 0 points but with their canonical accuracy seed so
+    // Christy gets intermediate content and Shannon gets advanced Calella
+    // content from the first question they answer.
+    createProfile("adult-1", "Christy", "adult", { accuracyPercentage: 65 }),
+    createProfile("adult-2", "Shannon", "adult", { accuracyPercentage: 85 }),
   ]
 });

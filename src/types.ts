@@ -121,6 +121,13 @@ export interface ChildProfile {
 export interface StoredAppState {
   children: ChildProfile[];
   activeProfileId: string;
+  /**
+   * Bumped manually whenever we want to force-clear all progress for
+   * every player. App.tsx checks this on mount and resets points etc.
+   * if the stored version is older than the current RESET_VERSION.
+   * Identity (name, type, avatarEmoji) is always preserved.
+   */
+  resetVersion?: number;
 }
 
 export interface AnswerPayload {
