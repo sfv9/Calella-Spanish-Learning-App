@@ -106,43 +106,52 @@ function App() {
   const [activeView, setActiveView] = useState<AppView>("game");
 
   // ─── Migration: ensure exactly the 4 canonical profiles, correct names ─────
+  // This runs once on mount. It MUST NEVER discard accumulated progress
+  // (points, mastered words, badges, session history) — only fill in
+  // missing canonical metadata (name, type) and create profiles that
+  // don't exist yet.
   useEffect(() => {
     setAppState((s) => {
-      // Build a clean map: keep any existing profile that matches a canonical ID,
-      // preserving its progress stats, but ensuring correct name/type.
       const existingById: Record<string, ChildProfile> = {};
-      s.children.forEach((c) => { existingById[c.id] = c; });
+      s.children.forEach((c) => {
+        if (c?.id) existingById[c.id] = c;
+      });
 
       const fixed = CANONICAL_PROFILES.map((canonical) => {
         const existing = existingById[canonical.id];
         if (existing) {
-          // Correct the name and type in case they drifted, keep all progress
+          // Existing profile — preserve EVERYTHING from it, only correct
+          // identity fields if they've drifted. We explicitly spread
+          // existing LAST after the corrections so progress fields
+          // (totalPoints, wordsMastered, etc.) can never be reset by a
+          // future change to CANONICAL_PROFILES.
           return {
             ...existing,
-            name: canonical.name,
-            profileType: canonical.type,
+            name: existing.name || canonical.name,
+            profileType: existing.profileType ?? canonical.type,
           };
         }
-        // Brand new profile (no existing data)
+        // Brand-new profile (no existing data)
         return createProfile(canonical.id, canonical.name, canonical.type, {
-          currentLevel:       canonical.level,
-          totalPoints:        canonical.points,
+          currentLevel: canonical.level,
+          totalPoints: canonical.points,
           accuracyPercentage: canonical.accuracy,
         });
       });
 
-      // Only update if something actually changed
+      // Cheap deep-ish equality: if every fixed profile is the SAME OBJECT
+      // reference as its corresponding existing one, nothing changed and
+      // we can short-circuit. Otherwise we replace the children array.
       const same =
         fixed.length === s.children.length &&
-        fixed.every((f, i) => f.id === s.children[i]?.id && f.name === s.children[i]?.name);
+        fixed.every((f, i) => f === s.children[i]);
       if (same) return s;
 
+      const activeStillExists = fixed.some((f) => f.id === s.activeProfileId);
       return {
         ...s,
         children: fixed,
-        activeProfileId: fixed.some((f) => f.id === s.activeProfileId)
-          ? s.activeProfileId
-          : fixed[0].id,
+        activeProfileId: activeStillExists ? s.activeProfileId : fixed[0].id,
       };
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
