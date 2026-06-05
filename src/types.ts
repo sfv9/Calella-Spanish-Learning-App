@@ -90,6 +90,12 @@ export interface ChildProfile {
   id: string;
   name: string;
   profileType?: "child" | "adult";
+  /**
+   * Avatar emoji shown in profile pills, race strip, leaderboard, etc.
+   * Optional: if unset, the app falls back to a position-based default.
+   * Users can tap their own pill to open the avatar picker.
+   */
+  avatarEmoji?: string;
   totalMinutesPracticed: number;
   totalPoints: number;
   streakCount: number;

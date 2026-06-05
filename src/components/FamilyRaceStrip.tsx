@@ -5,12 +5,17 @@ interface FamilyRaceStripProps {
   currentProfileId: string;
 }
 
+// Fallback emojis used if a profile doesn't have a custom avatarEmoji yet.
+// Updated defaults: Ila → 🦈, Ian → 🦸. Users can override via the avatar picker.
 const PROFILE_EMOJIS: Record<string, string> = {
-  "child-1": "🌟",
-  "child-2": "🦁",
+  "child-1": "🦈",
+  "child-2": "🦸",
   "adult-1": "👩",
   "adult-2": "🎯",
 };
+
+const getEmoji = (p: ChildProfile): string =>
+  p.avatarEmoji ?? PROFILE_EMOJIS[p.id] ?? "👤";
 
 const CHASE_TAUNTS = [
   "{pts} pts to pass {name}! 🏃",
@@ -101,7 +106,7 @@ export function FamilyRaceStrip({ allProfiles, currentProfileId }: FamilyRaceStr
               const isMe = p.id === currentProfileId;
               return (
                 <div key={p.id} className={`flex flex-col items-center ${isMe ? "scale-125" : "opacity-70"}`}>
-                  <span className="text-lg">{PROFILE_EMOJIS[p.id] ?? "👤"}</span>
+                  <span className="text-lg">{getEmoji(p)}</span>
                   {isMe && <span className="text-[8px] font-black text-white/90 leading-none">#{kidRank}</span>}
                 </div>
               );
@@ -150,7 +155,7 @@ export function FamilyRaceStrip({ allProfiles, currentProfileId }: FamilyRaceStr
             const isMe = p.id === currentProfileId;
             return (
               <div key={p.id} className={`flex flex-col items-center ${isMe ? "scale-125 z-10" : "opacity-70"}`}>
-                <span className={`text-lg leading-none ${isMe ? "drop-shadow-lg" : ""}`}>{PROFILE_EMOJIS[p.id] ?? "👤"}</span>
+                <span className={`text-lg leading-none ${isMe ? "drop-shadow-lg" : ""}`}>{getEmoji(p)}</span>
                 {isMe && <span className="text-[8px] font-black text-white/90 leading-none mt-0.5">#{rank}</span>}
               </div>
             );

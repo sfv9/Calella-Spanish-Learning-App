@@ -18,6 +18,7 @@ import { PointsDisplay } from "./components/PointsDisplay";
 import { ProgressDashboard } from "./components/ProgressDashboard";
 import { DialogueGame } from "./components/DialogueGame";
 import { AlphabetGame } from "./components/AlphabetGame";
+import { AvatarPicker } from "./components/AvatarPicker";
 import { RestaurantRoleplayGame } from "./components/RestaurantRoleplayGame";
 import { SpeakingGame } from "./components/SpeakingGame";
 import { Confetti } from "./components/Confetti";
@@ -67,20 +68,36 @@ const BADGE_EMOJI: Record<string, string> = {
   "5-day-streak": "🔥"
 };
 
-// Canonical profiles — used for migration
+// Canonical profiles — used for migration. `avatar` is the DEFAULT emoji
+// for new/migrating profiles; users can override anytime via the picker.
 const CANONICAL_PROFILES = [
-  { id: "child-1",  name: "Ila",     type: "child" as const, points: 0,    accuracy: 0,  level: 1 },
-  { id: "child-2",  name: "Ian",     type: "child" as const, points: 0,    accuracy: 0,  level: 1 },
-  { id: "adult-1",  name: "Christy", type: "adult" as const, points: 800,  accuracy: 65, level: 4 },
-  { id: "adult-2",  name: "Shannon", type: "adult" as const, points: 2000, accuracy: 85, level: 7 },
+  { id: "child-1",  name: "Ila",     type: "child" as const, avatar: "🦈",   points: 0,    accuracy: 0,  level: 1 },
+  { id: "child-2",  name: "Ian",     type: "child" as const, avatar: "🦸",   points: 0,    accuracy: 0,  level: 1 },
+  { id: "adult-1",  name: "Christy", type: "adult" as const, avatar: "👩",   points: 800,  accuracy: 65, level: 4 },
+  { id: "adult-2",  name: "Shannon", type: "adult" as const, avatar: "🎯",   points: 2000, accuracy: 85, level: 7 },
 ];
 
+// Visual styling (gradient/ring) stays tied to position. Only the EMOJI
+// is per-profile via `profile.avatarEmoji`.
 const CHILD_CONFIG = [
-  { emoji: "🌟", gradient: "from-sky-400 to-cyan-400",       ring: "ring-sky-200"     },
-  { emoji: "🦁", gradient: "from-orange-400 to-amber-400",   ring: "ring-orange-200"  },
-  { emoji: "👩", gradient: "from-rose-400 to-pink-500",      ring: "ring-rose-200"    },
-  { emoji: "🎯", gradient: "from-violet-400 to-purple-500",  ring: "ring-violet-200"  },
+  { gradient: "from-sky-400 to-cyan-400",      ring: "ring-sky-200"    },
+  { gradient: "from-orange-400 to-amber-400",  ring: "ring-orange-200" },
+  { gradient: "from-rose-400 to-pink-500",     ring: "ring-rose-200"   },
+  { gradient: "from-violet-400 to-purple-500", ring: "ring-violet-200" },
 ];
+
+// Pulls the emoji to display for a profile, with fallback chain:
+// 1. user's chosen avatarEmoji
+// 2. canonical default for this id
+// 3. hard fallback
+const FALLBACK_EMOJIS: Record<string, string> = {
+  "child-1": "🦈",
+  "child-2": "🦸",
+  "adult-1": "👩",
+  "adult-2": "🎯",
+};
+const getProfileEmoji = (p: { id: string; avatarEmoji?: string }) =>
+  p.avatarEmoji ?? FALLBACK_EMOJIS[p.id] ?? "👤";
 
 const MODE_CONFIG: Record<GameMode, { emoji: string; label: string; gradient: string }> = {
   flashcards:     { emoji: "🃏", label: "Flashcards",  gradient: "from-sky-400 to-sky-500"       },
@@ -121,14 +138,16 @@ function App() {
         const existing = existingById[canonical.id];
         if (existing) {
           // Existing profile — preserve EVERYTHING from it, only correct
-          // identity fields if they've drifted. We explicitly spread
-          // existing LAST after the corrections so progress fields
-          // (totalPoints, wordsMastered, etc.) can never be reset by a
-          // future change to CANONICAL_PROFILES.
+          // identity fields if they've drifted. Progress fields
+          // (totalPoints, wordsMastered, etc.) are NEVER reset.
+          //
+          // For NEW fields like avatarEmoji that didn't exist before,
+          // fill in the canonical default only if the field is missing.
           return {
             ...existing,
             name: existing.name || canonical.name,
             profileType: existing.profileType ?? canonical.type,
+            avatarEmoji: existing.avatarEmoji ?? canonical.avatar,
           };
         }
         // Brand-new profile (no existing data)
@@ -136,6 +155,7 @@ function App() {
           currentLevel: canonical.level,
           totalPoints: canonical.points,
           accuracyPercentage: canonical.accuracy,
+          avatarEmoji: canonical.avatar,
         });
       });
 
@@ -161,6 +181,7 @@ function App() {
   const [activeSession, setActiveSession] = useState<SessionState | null>(null);
   const [showParentDashboard, setShowParentDashboard] = useState(false);
   const [practicePool, setPracticePool] = useState<LessonTerm[]>([]);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
 
   const deferredWorldId = useDeferredValue(selectedWorldId);
   const currentChild =
@@ -233,6 +254,16 @@ function App() {
       ...s,
       children: s.children.map((c) =>
         c.id === s.activeProfileId ? updater(c) : c
+      ),
+    }));
+  };
+
+  // Update the active profile's avatar emoji (called from the picker).
+  const handleSetActiveAvatar = (emoji: string) => {
+    setAppState((s) => ({
+      ...s,
+      children: s.children.map((c) =>
+        c.id === s.activeProfileId ? { ...c, avatarEmoji: emoji } : c
       ),
     }));
   };
@@ -595,7 +626,9 @@ function App() {
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
         <div className="mx-auto max-w-[1400px] px-3 py-2 flex items-center gap-2 overflow-x-auto">
 
-          {/* Profile Pills — compact single row, scrollable on mobile */}
+          {/* Profile Pills — compact single row, scrollable on mobile.
+              Tap an inactive pill: switch to that profile.
+              Tap your OWN (active) pill: open the avatar picker. */}
           <div className="flex gap-1.5 overflow-x-auto flex-shrink-0 scrollbar-hide">
             {appState.children.map((child, index) => {
               const active = child.id === appState.activeProfileId;
@@ -604,21 +637,32 @@ function App() {
                 <button
                   key={child.id}
                   type="button"
-                  onClick={() =>
-                    startTransition(() => {
-                      setAppState((s) => ({ ...s, activeProfileId: child.id }));
-                      setActiveSession(null);
-                      setFreePlayMode(null);
-                    })
-                  }
+                  onClick={() => {
+                    if (active) {
+                      setAvatarPickerOpen(true);
+                    } else {
+                      startTransition(() => {
+                        setAppState((s) => ({ ...s, activeProfileId: child.id }));
+                        setActiveSession(null);
+                        setFreePlayMode(null);
+                      });
+                    }
+                  }}
                   className={`flex items-center gap-1.5 rounded-[14px] border-2 px-2.5 py-1.5 transition hover:scale-[1.02] active:scale-[0.98] flex-shrink-0 ${
                     active
                       ? "border-orange-300 bg-orange-50 shadow-md"
                       : "border-gray-200 bg-white"
                   }`}
+                  aria-label={active ? `Tap to change ${child.name}'s avatar` : `Switch to ${child.name}`}
+                  title={active ? "Tap to change avatar" : child.name}
                 >
-                  <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br ${cfg.gradient}`}>
-                    <span className="text-lg leading-none">{cfg.emoji}</span>
+                  <div className={`relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br ${cfg.gradient}`}>
+                    <span className="text-lg leading-none">{getProfileEmoji(child)}</span>
+                    {active && (
+                      <span className="absolute -bottom-0.5 -right-0.5 rounded-full bg-white text-[8px] leading-none px-0.5 shadow">
+                        ✏️
+                      </span>
+                    )}
                   </div>
                   <div className="text-left">
                     <p className={`text-sm font-black leading-none ${active ? "text-orange-700" : "text-ink"}`}>{child.name}</p>
@@ -886,6 +930,16 @@ function App() {
           />
         )}
       </main>
+
+      {/* ── AVATAR PICKER (overlay) ───────────────────────────────────── */}
+      {avatarPickerOpen && (
+        <AvatarPicker
+          currentEmoji={getProfileEmoji(currentChild)}
+          profileName={currentChild.name}
+          onSelect={handleSetActiveAvatar}
+          onClose={() => setAvatarPickerOpen(false)}
+        />
+      )}
     </div>
   );
 }

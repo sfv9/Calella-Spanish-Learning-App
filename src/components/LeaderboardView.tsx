@@ -61,7 +61,7 @@ export function LeaderboardView({ appState, activeProfileId, liveSessionPoints =
       />
 
       {/* WEEKLY RANKINGS */}
-      <WeeklyRankingsSection standings={stats.weeklyLeaderboard} />
+      <WeeklyRankingsSection standings={stats.weeklyLeaderboard} profiles={appState.children} />
 
       {/* STREAK COMPETITION */}
       <StreakCompetitionSection streaks={stats.streakCompetition} />
@@ -86,7 +86,7 @@ function DailyChampionCard({ appState, dailyWinner }: DailyChampionCardProps) {
   const winner = appState.children.find((c) => c.id === dailyWinner.winnerId);
   if (!winner) return null;
 
-  const emoji = winner.name === "Ila" ? "🌟" : winner.name === "Ian" ? "🦁" : winner.name === "Christy" ? "👩" : "🎯";
+  const emoji = winner.avatarEmoji ?? PROFILE_EMOJIS[winner.id] ?? "👤";
 
   return (
     <div className="bg-gradient-to-r from-yellow-400 to-amber-400 rounded-[20px] p-6 text-white shadow-lg border-2 border-yellow-300">
@@ -116,15 +116,17 @@ const RANK_STYLES = [
   { bg: "from-blue-400 to-indigo-500",    border: "border-blue-300",  medal: "4️⃣", label: "4TH"       },
 ];
 
+// Fallback emojis (overridden by user-picked profile.avatarEmoji).
 const PROFILE_EMOJIS: Record<string, string> = {
-  "child-1": "🌟",
-  "child-2": "🦁",
+  "child-1": "🦈",
+  "child-2": "🦸",
   "adult-1": "👩",
   "adult-2": "🎯",
 };
 
-function WeeklyRankingsSection({ standings }: { standings: any[] }) {
+function WeeklyRankingsSection({ standings, profiles }: { standings: any[]; profiles: ChildProfile[] }) {
   const maxPts = Math.max(...standings.map((s: any) => s.totalPoints), 1);
+  const profileById = new Map(profiles.map(p => [p.id, p]));
 
   return (
     <div className="bg-white rounded-[16px] border-2 border-slate-200 overflow-hidden">
@@ -139,7 +141,8 @@ function WeeklyRankingsSection({ standings }: { standings: any[] }) {
         {standings.map((standing: any, index: number) => {
           const style = RANK_STYLES[index] ?? RANK_STYLES[3];
           const pct = Math.round((standing.totalPoints / maxPts) * 100);
-          const emoji = PROFILE_EMOJIS[standing.profileId] ?? "👤";
+          const profile = profileById.get(standing.profileId);
+          const emoji = profile?.avatarEmoji ?? PROFILE_EMOJIS[standing.profileId] ?? "👤";
           const ptsToNext = index > 0
             ? standings[index - 1].totalPoints - standing.totalPoints
             : null;
@@ -327,7 +330,7 @@ function BadgesSection({ appState, stats }: { appState: StoredAppState; stats: C
 
 // ===== TODAY'S RACE =====
 const PROFILE_EMOJIS_LB: Record<string, string> = {
-  "child-1": "🌟", "child-2": "🦁", "adult-1": "👩", "adult-2": "🎯",
+  "child-1": "🦈", "child-2": "🦸", "adult-1": "👩", "adult-2": "🎯",
 };
 
 function TodaysRaceSection({ profiles, activeProfileId, liveSessionPoints = 0 }: {
@@ -361,7 +364,7 @@ function TodaysRaceSection({ profiles, activeProfileId, liveSessionPoints = 0 }:
       <div className="p-4 space-y-3">
         {sorted.map(({ profile, todayPts, isLive }, i) => {
           const pct = Math.round((todayPts / maxPts) * 100);
-          const emoji = PROFILE_EMOJIS_LB[profile.id] ?? "👤";
+          const emoji = profile.avatarEmoji ?? PROFILE_EMOJIS_LB[profile.id] ?? "👤";
           const isLeading = i === 0 && todayPts > 0;
           return (
             <div key={profile.id} className={`rounded-[12px] border p-3 ${
