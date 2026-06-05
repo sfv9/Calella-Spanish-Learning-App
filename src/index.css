@@ -1,0 +1,103 @@
+@import "@fontsource/baloo-2/700.css";
+@import "@fontsource/plus-jakarta-sans/400.css";
+@import "@fontsource/plus-jakarta-sans/500.css";
+@import "@fontsource/plus-jakarta-sans/700.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color: #16304a;
+    background:
+      radial-gradient(circle at top left, rgba(255, 255, 255, 0.65), transparent 26%),
+      linear-gradient(180deg, #74d9f2 0%, #30bedf 38%, #118eb6 100%);
+    font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  body {
+    @apply min-h-screen bg-shell text-ink antialiased;
+  }
+
+  button {
+    @apply transition duration-150;
+  }
+}
+
+/* ── Wave visualizer ── */
+@keyframes wave-bar {
+  0%, 100% { transform: scaleY(0.25); }
+  50%       { transform: scaleY(1); }
+}
+.wave-bar {
+  animation: wave-bar 0.7s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+/* ── Star burst ── */
+@keyframes star-float {
+  0%   { transform: translateY(0) scale(0.5); opacity: 1; }
+  100% { transform: translateY(-80px) scale(1.5); opacity: 0; }
+}
+.star-float {
+  font-size: 1.5rem;
+  animation: star-float 0.75s cubic-bezier(0.2, 0, 0.5, 1) forwards;
+  pointer-events: none;
+  user-select: none;
+  position: absolute;
+}
+
+/* ── Game feedback animations ── */
+@keyframes bounce-in {
+  0%   { transform: scale(0.82); opacity: 0.7; }
+  65%  { transform: scale(1.08); }
+  100% { transform: scale(1);    opacity: 1; }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15%  { transform: translateX(-8px); }
+  30%  { transform: translateX(8px); }
+  50%  { transform: translateX(-5px); }
+  70%  { transform: translateX(5px); }
+  85%  { transform: translateX(-2px); }
+}
+@keyframes pop-in {
+  0%   { transform: scale(0.5) translateY(6px); opacity: 0; }
+  75%  { transform: scale(1.06) translateY(-2px); }
+  100% { transform: scale(1) translateY(0);  opacity: 1; }
+}
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(77, 187, 114, 0.55); }
+  70%  { box-shadow: 0 0 0 14px rgba(77, 187, 114, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(77, 187, 114, 0); }
+}
+@keyframes float-up {
+  0%   { transform: translateY(0);   opacity: 1; }
+  100% { transform: translateY(-32px); opacity: 0; }
+}
+
+.animate-bounce-in  { animation: bounce-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-shake      { animation: shake 0.45s ease-in-out; }
+.animate-pop-in     { animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-pulse-ring { animation: pulse-ring 0.6s ease-out; }
+
+/* ── Kid-friendly game button base ── */
+.kid-btn {
+  @apply rounded-[22px] px-5 py-5 font-display text-xl font-black transition
+         hover:scale-[1.03] active:scale-[0.97] select-none;
+}
+
+@layer components {
+  .glass-panel {
+    @apply rounded-[24px] border border-white/55 bg-white/80 shadow-float backdrop-blur-xl;
+  }
+
+  .capsule {
+    @apply inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/80 px-4 py-2 text-sm font-semibold text-ink shadow-sm;
+  }
+
+  .action-button {
+    @apply inline-flex items-center justify-center rounded-full px-5 py-3 font-bold text-white shadow-lg shadow-coral/30;
+  }
+}
