@@ -106,6 +106,13 @@ export interface ChildProfile {
   totalQuestions: number;
   totalCorrect: number;
   lastPlayedDate?: string;
+  /**
+   * Points earned per calendar day, keyed by YYYY-MM-DD.
+   * Updated on EVERY answer (not just session completions), so casual
+   * play registers in "Today's Race" immediately. Keeps the last ~30
+   * days; older entries are pruned when written.
+   */
+  dailyPoints?: Record<string, number>;
   badges: string[];
   dailyGoalCompletions: number;
   sessionHistory: SessionSummary[];

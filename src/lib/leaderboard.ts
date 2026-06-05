@@ -51,6 +51,22 @@ export interface CompetitionStats {
 }
 
 /**
+ * Lookup how many points a profile has earned TODAY.
+ * Reads `profile.dailyPoints[today]` (which is updated on every answer
+ * in App.tsx), falling back to summing sessionHistory for legacy state
+ * that pre-dates the dailyPoints ledger.
+ */
+export const getTodayPointsFor = (profile: ChildProfile): number => {
+  const today = todayKey();
+  const fromLedger = profile.dailyPoints?.[today];
+  if (typeof fromLedger === "number") return fromLedger;
+  // Legacy fallback: sum any completed sessions for today
+  return profile.sessionHistory
+    .filter((s) => s.date === today)
+    .reduce((sum, s) => sum + (s.pointsEarned ?? 0), 0);
+};
+
+/**
  * Calculate daily winner (highest points earned today)
  */
 export const calculateDailyWinner = (
@@ -58,12 +74,10 @@ export const calculateDailyWinner = (
 ): DailyWinnerEntry | null => {
   const today = todayKey();
 
-  // Find the profile with highest points earned today
-  const dailyPoints = profiles.map((profile) => {
-    const todaysSessions = profile.sessionHistory.filter((s) => s.date === today);
-    const pointsToday = todaysSessions.reduce((sum, s) => sum + (s.pointsEarned ?? 0), 0);
-    return { profile, pointsToday };
-  });
+  const dailyPoints = profiles.map((profile) => ({
+    profile,
+    pointsToday: getTodayPointsFor(profile),
+  }));
 
   const winner = dailyPoints.reduce((best, current) =>
     current.pointsToday > best.pointsToday ? current : best
@@ -76,46 +90,26 @@ export const calculateDailyWinner = (
     date: today,
     winnerId: winner.profile.id,
     pointsEarned: winner.pointsToday,
-    gameType: "mixed" // Could track more specifically if we enhance sessionHistory
+    gameType: "mixed",
   };
 };
 
 /**
- * Calculate weekly standings
- * Uses total lifetime points so preset profiles still appear correctly ranked
+ * Family Rankings — all-time totals. The UI calls this "Family Rankings"
+ * with subtitle "All-time points · Who's the champion?", so we use
+ * profile.totalPoints directly. (Previously this mixed weekly + lifetime,
+ * which made the numbers inconsistent depending on play history.)
  */
 export const calculateWeeklyLeaderboard = (
   profiles: ChildProfile[]
 ): WeeklyStanding[] => {
-  const now = new Date();
-  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
   const standings = profiles
-    .map((profile) => {
-      // Points this week from sessions
-      const weekSessions = profile.sessionHistory.filter((s) => {
-        const sessionDate = new Date(`${s.date}T00:00:00`);
-        return sessionDate >= weekAgo;
-      });
-      const pointsThisWeek = weekSessions.reduce(
-        (sum, s) => sum + (s.pointsEarned ?? 0),
-        0
-      );
-
-      // Use lifetime total so preset profiles show real rankings
-      // Fall back to lifetime if no sessions this week
-      const displayPoints = pointsThisWeek > 0 ? pointsThisWeek : profile.totalPoints;
-
-      // All-time accuracy
-      const accuracy = profile.accuracyPercentage;
-
-      return {
-        profileId: profile.id,
-        profileName: profile.name,
-        totalPoints: displayPoints,
-        accuracy
-      };
-    })
+    .map((profile) => ({
+      profileId: profile.id,
+      profileName: profile.name,
+      totalPoints: profile.totalPoints,
+      accuracy: profile.accuracyPercentage,
+    }))
     .sort((a, b) => {
       // Sort by points first, then accuracy
       if (b.totalPoints !== a.totalPoints) {

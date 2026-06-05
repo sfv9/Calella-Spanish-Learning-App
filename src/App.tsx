@@ -286,11 +286,26 @@ function App() {
       const attempts = cur.attempts + 1;
       const correct = cur.correct + (payload.correct ? 1 : 0);
       const mastered = cur.mastered || correct >= 5;
-      const totalPoints = profile.totalPoints + 5 + (payload.correct ? 10 : 0);
+      const earned = 5 + (payload.correct ? 10 : 0);
+      const totalPoints = profile.totalPoints + earned;
       const nextWordsMastered =
         mastered && !profile.wordsMastered.includes(payload.wordId)
           ? [...profile.wordsMastered, payload.wordId]
           : profile.wordsMastered;
+
+      // ── Daily points ledger ────────────────────────────────────────
+      // Track points per day so "Today's Race" sees casual flashcard
+      // play, not just completed 15-min sessions. Prune to last 30 days.
+      const today = todayKey();
+      const dailyPointsPrev = profile.dailyPoints ?? {};
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 30);
+      const cutoffKey = cutoff.toISOString().slice(0, 10);
+      const dailyPoints: Record<string, number> = {};
+      for (const [date, pts] of Object.entries(dailyPointsPrev)) {
+        if (date >= cutoffKey) dailyPoints[date] = pts;
+      }
+      dailyPoints[today] = (dailyPoints[today] ?? 0) + earned;
 
       const base: ChildProfile = {
         ...profile,
@@ -307,10 +322,11 @@ function App() {
         },
         wordsMastered: nextWordsMastered,
         currentLevel: getLevel(totalPoints).id,
+        dailyPoints,
       };
 
       newlyEarnedBadges = getNewBadges(base);
-      pointsEarned = 5 + (payload.correct ? 10 : 0);
+      pointsEarned = earned;
       return { ...base, badges: [...new Set([...base.badges, ...newlyEarnedBadges])] };
     });
 
@@ -379,6 +395,10 @@ function App() {
         finalMode = activeSession.worldId === "restaurant" ? "restaurant" : "conversation";
       }
 
+      // Credit the session-completion bonus to today's ledger too
+      const dailyPoints = { ...(profile.dailyPoints ?? {}) };
+      dailyPoints[today] = (dailyPoints[today] ?? 0) + bonusPoints;
+
       return {
         ...profile,
         totalMinutesPracticed: profile.totalMinutesPracticed + 15,
@@ -386,6 +406,7 @@ function App() {
         currentLevel: getLevel(profile.totalPoints + bonusPoints).id,
         streakCount: nextStreak,
         lastPlayedDate: today,
+        dailyPoints,
         badges: [...new Set([...profile.badges, ...badgeIds])],
         dailyGoalCompletions: profile.dailyGoalCompletions + 1,
         sessionHistory: [

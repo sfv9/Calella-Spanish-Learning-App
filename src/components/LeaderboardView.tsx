@@ -16,8 +16,15 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
+/**
+ * Today's points for a profile: prefers the new dailyPoints ledger
+ * (updated on every answer); falls back to summing today's completed
+ * sessions for backward compat with state that pre-dates the ledger.
+ */
 function getTodayPoints(profile: ChildProfile): number {
   const today = todayKey();
+  const fromLedger = profile.dailyPoints?.[today];
+  if (typeof fromLedger === "number") return fromLedger;
   return profile.sessionHistory
     .filter(s => s.date === today)
     .reduce((sum, s) => sum + (s.pointsEarned ?? 0), 0);
