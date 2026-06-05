@@ -662,7 +662,7 @@ function App() {
             </div>
             {/* Spain countdown — compact chip in header */}
             {(() => {
-              const spainDate = new Date("2026-09-01T00:00:00");
+              const spainDate = new Date("2026-07-09T00:00:00");
               const days = Math.max(0, Math.ceil((spainDate.getTime() - new Date().getTime()) / 86400000));
               const color = days <= 14 ? "bg-red-500" : days <= 30 ? "bg-orange-500" : days <= 60 ? "bg-amber-500" : "bg-blue-600";
               return (

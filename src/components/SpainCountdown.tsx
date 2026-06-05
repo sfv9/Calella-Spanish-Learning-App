@@ -5,7 +5,7 @@
  */
 
 // ⚠️  Update this to your actual Spain departure date
-const SPAIN_DATE = new Date("2026-09-01T00:00:00");
+const SPAIN_DATE = new Date("2026-07-09T00:00:00");
 
 function getDaysToSpain(): number {
   const now = new Date();
