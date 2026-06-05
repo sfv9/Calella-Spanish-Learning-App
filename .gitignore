@@ -2,3 +2,20 @@ node_modules/
 work/
 dist/
 .DS_Store
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Vite emits .d.ts/.js shadows of *.config.ts during type-check; we don't
+# want either of those in the repo since they're auto-generated from the .ts.
+vite.config.d.ts
+vite.config.js
+
+# Environment / local secrets
+.env
+.env.local
+.env.*.local
+
+# Editor noise
+.vscode/
+.idea/
