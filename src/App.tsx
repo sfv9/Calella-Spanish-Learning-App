@@ -17,6 +17,7 @@ import { ParentDashboard } from "./components/ParentDashboard";
 import { PointsDisplay } from "./components/PointsDisplay";
 import { ProgressDashboard } from "./components/ProgressDashboard";
 import { DialogueGame } from "./components/DialogueGame";
+import { AlphabetGame } from "./components/AlphabetGame";
 import { RestaurantRoleplayGame } from "./components/RestaurantRoleplayGame";
 import { SpeakingGame } from "./components/SpeakingGame";
 import { Confetti } from "./components/Confetti";
@@ -90,6 +91,7 @@ const MODE_CONFIG: Record<GameMode, { emoji: string; label: string; gradient: st
   restaurant:     { emoji: "🍽️", label: "Restaurant",  gradient: "from-orange-400 to-red-400"    },
   speaking:       { emoji: "🎙️", label: "Say It!",    gradient: "from-pink-400 to-rose-500"     },
   dialogue:       { emoji: "🎭", label: "Dialogue",    gradient: "from-indigo-400 to-violet-500" },
+  alphabet:       { emoji: "🔤", label: "Alphabet",    gradient: "from-pink-400 to-purple-500"   },
 };
 
 const GUIDED_SEGMENTS: Array<{ label: string; maxSeconds: number }> = [
@@ -475,6 +477,7 @@ function App() {
     if (freePlayMode === "conversation")   return <ConversationGame key={gameKey} terms={gameTerms} onAnswer={applyAnswerResult} />;
     if (freePlayMode === "speaking")       return <SpeakingGame key={gameKey} terms={gameTerms} onAnswer={applyAnswerResult} />;
     if (freePlayMode === "dialogue")       return <DialogueGame key={gameKey} terms={gameTerms} onAnswer={applyAnswerResult} />;
+    if (freePlayMode === "alphabet")       return <AlphabetGame key={gameKey} />;
 
     return (
       <div className="rounded-[28px] bg-white p-6 shadow-lg border border-gray-100">
@@ -568,10 +571,13 @@ function App() {
     );
   };
 
-  const quickPlayModes: GameMode[] =
+  // Kids get the Alphabet button first (no adult vocab needed); adults skip it.
+  const isKid = currentChild.profileType === "child";
+  const baseModes: GameMode[] =
     deferredWorldId === "restaurant"
       ? ["flashcards", "multipleChoice", "listening", "matching", "restaurant", "speaking", "dialogue"]
       : ["flashcards", "multipleChoice", "listening", "matching", "conversation", "speaking", "dialogue"];
+  const quickPlayModes: GameMode[] = isKid ? ["alphabet", ...baseModes] : baseModes;
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (

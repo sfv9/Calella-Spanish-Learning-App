@@ -24,7 +24,8 @@ export type GameMode =
   | "conversation"
   | "restaurant"
   | "speaking"
-  | "dialogue";
+  | "dialogue"
+  | "alphabet";
 
 export interface LessonTerm {
   id: string;
